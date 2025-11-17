@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bank Account System</title>
+  <style>
+    body {
+      font-family: Arial;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .box {
+      background: white;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 8px #ccc;
+    }
+    input, select, button {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: black;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Bank Account System</h2>
+
+<div class="box">
+  <h3>Create Account</h3>
+  <select id="accType">
+    <option value="savings">Savings Account</option>
+    <option value="current">Current Account</option>
+  </select>
+  <input type="text" id="accName" placeholder="Account Holder Name">
+  <button onclick="createAccount()">Create Account</button>
+  <p id="createResult"></p>
+</div>
+
+<div class="box">
+  <h3>Deposit</h3>
+  <input type="number" id="depId" placeholder="Account ID">
+  <input type="number" id="depAmt" placeholder="Amount">
+  <button onclick="deposit()">Deposit</button>
+  <p id="depResult"></p>
+</div>
+
+<div class="box">
+  <h3>Withdraw</h3>
+  <input type="number" id="withId" placeholder="Account ID">
+  <input type="number" id="withAmt" placeholder="Amount">
+  <button onclick="withdraw()">Withdraw</button>
+  <p id="withResult"></p>
+</div>
+
+<div class="box">
+  <h3>Transfer</h3>
+  <input type="number" id="tFrom" placeholder="From Account ID">
+  <input type="number" id="tTo" placeholder="To Account ID">
+  <input type="number" id="tAmt" placeholder="Amount">
+  <button onclick="transfer()">Transfer</button>
+  <p id="tResult"></p>
+</div>
+
+<div class="box">
+  <h3>Apply Interest (Savings Only)</h3>
+  <input type="number" id="intId" placeholder="Savings Account ID">
+  <button onclick="applyInterest()">Apply Interest</button>
+  <p id="intResult"></p>
+</div>
+
+<div class="box">
+  <h3>All Accounts</h3>
+  <pre id="allAcc"></pre>
+</div>
+
+<script>
+// ------------------ MODEL CLASSES -------------------
+class Account {
+  constructor(id, name) {
+    this.id = id;
+    this.name = name;
+    this.balance = 0;
+  }
+
+  deposit(amount) {
+    this.balance += amount;
+  }
+
+  withdraw(amount) {
+    if (this.balance < amount) return false;
+    this.balance -= amount;
+    return true;
+  }
+}
+
+class SavingsAccount extends Account {
+  constructor(id, name) {
+    super(id, name);
+    this.interestRate = 0.05; // 5%
+  }
+
+  applyInterest() {
+    this.balance += this.balance * this.interestRate;
+  }
+}
+
+class CurrentAccount extends Account {
+  constructor(id, name) {
+    super(id, name);
+  }
+}
+
+class Transaction {
+  static transfer(fromAcc, toAcc, amount) {
+    if (fromAcc.withdraw(amount)) {
+      toAcc.deposit(amount);
+      return true;
+    }
+    return false;
+  }
+}
+
+// ------------------ SYSTEM STORAGE -------------------
+let accounts = [];
+let nextId = 1;
+
+// ------------------ UI FUNCTIONS ---------------------
+
+function showAll() {
+  document.getElementById("allAcc").textContent = JSON.stringify(accounts, null, 2);
+}
+
+function createAccount() {
+  let type = document.getElementById("accType").value;
+  let name = document.getElementById("accName").value;
+
+  if (!name) {
+    alert("Enter name!");
+    return;
+  }
+
+  let acc;
+  if (type === "savings") {
+    acc = new SavingsAccount(nextId++, name);
+  } else {
+    acc = new CurrentAccount(nextId++, name);
+  }
+
+  accounts.push(acc);
+  document.getElementById("createResult").textContent = Account created with ID ${acc.id};
+  showAll();
+}
+
+function deposit() {
+  let id = parseInt(document.getElementById("depId").value);
+  let amt = parseFloat(document.getElementById("depAmt").value);
+
+  let acc = accounts.find(a => a.id === id);
+  if (!acc) { alert("Invalid ID"); return; }
+
+  acc.deposit(amt);
+  document.getElementById("depResult").textContent = "Deposit successful";
+  showAll();
+}
+
+function withdraw() {
+  let id = parseInt(document.getElementById("withId").value);
+  let amt = parseFloat(document.getElementById("withAmt").value);
+
+  let acc = accounts.find(a => a.id === id);
+  if (!acc) { alert("Invalid ID"); return; }
+
+  let ok = acc.withdraw(amt);
+  document.getElementById("withResult").textContent = ok ? "Withdrawal successful" : "Insufficient balance";
+  showAll();
+}
+
+function transfer() {
+  let fromId = parseInt(document.getElementById("tFrom").value);
+  let toId = parseInt(document.getElementById("tTo").value);
+  let amt = parseFloat(document.getElementById("tAmt").value);
+
+  let fromAcc = accounts.find(a => a.id === fromId);
+  let toAcc = accounts.find(a => a.id === toId);
+
+  if (!fromAcc || !toAcc) { alert("Invalid account IDs"); return; }
+
+  let ok = Transaction.transfer(fromAcc, toAcc, amt);
+  document.getElementById("tResult").textContent = ok ? "Transfer successful" : "Insufficient balance";
+  showAll();
+}
+
+function applyInterest() {
+  let id = parseInt(document.getElementById("intId").value);
+  let acc = accounts.find(a => a.id === id);
+
+  if (!acc) { alert("Invalid ID"); return; }
+  if (!(acc instanceof SavingsAccount)) {
+    document.getElementById("intResult").textContent = "Interest applies only to Savings accounts!";
+    return;
+  }
+
+  acc.applyInterest();
+  document.getElementById("intResult").textContent = "Interest applied";
+  showAll();
+}
+
+</script>
+
+</body>
+</html>
